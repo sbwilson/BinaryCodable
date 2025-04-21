@@ -135,12 +135,24 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
       return value
     }
   }
+  /*
+   This would be faster..
+   
+   
+   haystack.withUnsafeBytes { haystackPtr in
+       needle.withUnsafeBytes { needlePtr in
+           if let found = memmem(haystackPtr.baseAddress, haystack.count, needlePtr.baseAddress, needle.count) {
+               let offset = haystackPtr.baseAddress!.distance(to: found)
+               print("Found at offset: \(offset)")
+           }
+       }
+   }
+   */
   func decode(until delimiter: Data) throws -> Data {
     if delimiter.count == 0 {
       throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
         "Binary delimiter should have at least one byte"))
     }
-    
     let remainingData = try bufferedData.peek(maxLength: Int.max)
     guard let range = remainingData.range(of: delimiter) else {
       throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
