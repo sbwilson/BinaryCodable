@@ -141,12 +141,12 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
         "Binary delimiter should have at least one byte"))
     }
     
-    let read = try bufferedData.read(until: delimiter)
-    guard read.didFindDelimiter else {
+    let remainingData = try bufferedData.peek(maxLength: Int.max)
+    guard let range = remainingData.range(of: delimiter) else {
       throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
-        "Unable to find delimiter for data."))
+              "Unable to find delimiter for data."))
     }
-    return read.data
+    return try bufferedData.read(maxBytes: range.lowerBound - delimiter.count + 1)
   }
 
   func decodeString(encoding: String.Encoding, terminator: UInt8?) throws -> String {
