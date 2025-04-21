@@ -135,6 +135,19 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
       return value
     }
   }
+  func decode(until delimiter: Data) throws -> Data {
+    if delimiter.count == 0 {
+      throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
+        "Binary delimiter should have at least one byte"))
+    }
+    
+    let read = try bufferedData.read(until: delimiter)
+    guard read.didFindDelimiter else {
+      throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
+        "Unable to find delimiter for data."))
+    }
+    return read.data
+  }
 
   func decodeString(encoding: String.Encoding, terminator: UInt8?) throws -> String {
     let data: Data

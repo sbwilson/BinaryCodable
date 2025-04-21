@@ -134,6 +134,14 @@ public protocol BinaryDecodingContainer {
    - returns: A Data representation of the decoded bytes.
    */
   mutating func decode(length: Int) throws -> Data
+	
+  /**
+   Decodes the data until the delimiter is found
+
+   - parameter delimiter: The ending delimiter
+   - returns: A Data representation of the decoded bytes. This does _not_ include the delimiter data
+   */
+  mutating func decode(until delimiter: Data) throws -> Data
 
   /**
    Decodes the remainder of available data.

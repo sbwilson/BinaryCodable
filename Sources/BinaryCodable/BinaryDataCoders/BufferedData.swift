@@ -109,6 +109,37 @@ public final class BufferedData {
       return (data: data, didFindDelimiter: false)
     }
   }
+  
+  /**
+   Returns bytes from the source until either the delimiter is found or there is no remaining data in the source.
+
+   The internal buffer cursor will also be moved forward by the number of returned bytes.
+
+   Note that it is not guaranteed that `maxLength` bytes will be returned. For example, if the source only has 100 bytes
+   of data available but 1000 are requested, then only 100 bytes will be returned.
+   */
+  public func read(until delimiter: Data) throws -> (data: Data, didFindDelimiter: Bool) {
+    var range = buffer.range(of: delimiter)
+    while range == nil {
+      guard let data = try reader.read(length: 1) else {
+        break
+      }
+      if let subRange = data.range(of: delimiter) {
+        range = subRange
+      }
+      buffer.append(data)
+    }
+    if let range = range {
+      let data = buffer.prefix(range.startIndex - buffer.startIndex)
+      buffer = buffer.dropFirst(data.count)
+      return (data: data, didFindDelimiter: true)
+    } else {
+      // Couldn't find the delimeter, so read in all of the data.
+      let data = buffer
+      buffer = buffer.dropFirst(data.count)
+      return (data: data, didFindDelimiter: false)
+    }
+  }
 
   // Note: the buffer may never decrease in size which can be a concern for long-running applications.
   // This may need to be changed to a ring buffer implementation, where the ring buffer's size is increased only when
