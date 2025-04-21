@@ -19,7 +19,7 @@ struct DecodeHeader: BinaryDecodable {
   var prefix: UInt16
   var contents: Data
   var foundDelimiter: Data
-  let delimiter: Data = Data([6,7,8])
+  let delimiter: Data = Data([0xFF,0xC6,0x00])
   var suffix: UInt16
   
   
@@ -37,7 +37,7 @@ final class DecodeToBinaryDelimiterTests: XCTestCase {
 
   func testDecodeUntilDelimiter() throws {
     // Given
-    let data: [UInt8] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0A]
+    let data: [UInt8] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0A, 0xFF, 0xC6, 0x00, 0x0A, 0x09]
     let decoder = BinaryDataDecoder()
     
     // When
@@ -45,8 +45,24 @@ final class DecodeToBinaryDelimiterTests: XCTestCase {
     
     // Then
     XCTAssertTrue(header.prefix == 0x0100)
-    XCTAssertTrue(header.contents == Data([2,3,4,5]))
+    XCTAssertTrue(header.contents == Data([UInt8](2..<11)))
     XCTAssertTrue(header.foundDelimiter == header.delimiter)
-    XCTAssertTrue(header.suffix == 0x0A09)
+    XCTAssertTrue(header.suffix == 0x090A)
+  }
+  
+  func testDecodeUntilDelimiterLarger() throws {
+    // Given
+    var data = Data([UInt8](0..<255))
+    data.append(Data([0xFF,0xC6,0x00,0x0A,0x09]))
+    let decoder = BinaryDataDecoder()
+    
+    // When
+    let header = try decoder.decode(DecodeHeader.self, from: data)
+    
+    // Then
+    XCTAssertTrue(header.prefix == 0x0100)
+    XCTAssertTrue(header.contents == Data([UInt8](2..<255)))
+    XCTAssertTrue(header.foundDelimiter == header.delimiter)
+    XCTAssertTrue(header.suffix == 0x090A)
   }
 }
