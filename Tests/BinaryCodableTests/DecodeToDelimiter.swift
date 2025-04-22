@@ -40,7 +40,7 @@ struct DecodeParts: BinaryDecodable {
 	var footer: Data
 	
 	let headerEnd = Data([0xE0, 0x7F, 0x10, 0x00, 0x4F, 0x42, 0x00, 0x00 , 0xFF, 0xFF, 0xFF, 0xFF])
-	let bodyEnd = Data([0xFE, 0xFF, 0xDD, 0xE0, 0x00, 0x00, 0x00, 0x00])
+	let bodyEnd = Data([0xFE, 0xFF, 0xDD, 0xE0, /*0x00, 0x00, 0x00, 0x00*/])
 	
 
 	init(from decoder: any BinaryDecoder) throws {
@@ -92,6 +92,9 @@ final class DecodeToBinaryDelimiterTests: XCTestCase {
 	
 	func testDecodeDicom() throws {
 		// Given
+    
+    /// This file is courtesy of the GDCM dataset:
+    /// https://sourceforge.net/projects/gdcm/files/gdcmData/
 		let dicomUrl = URL(fileURLWithPath: #file)
 		  .deletingLastPathComponent()
 		  .appendingPathComponent("D_CLUNIE_NM1_JPLY.dcm")
@@ -107,6 +110,6 @@ final class DecodeToBinaryDelimiterTests: XCTestCase {
 		XCTAssertTrue(parts.bodyEnd == parts.bodyDelimiter)
 		XCTAssertTrue(parts.header.count == 2978)
 		XCTAssertTrue(parts.body.count == expectedCount)
-		XCTAssertTrue(parts.footer.count == 0)
+		XCTAssertTrue(parts.footer.count == 4)
 	}
 }
