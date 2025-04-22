@@ -121,7 +121,7 @@ public final class BufferedData {
   public func read(until delimiter: Data) throws -> (data: Data, didFindDelimiter: Bool) {
     var range = buffer.range(of: delimiter)
     while range == nil {
-      guard let data = try reader.read(length: 64) else {
+      guard let data = try reader.read(length: delimiter.count) else {
         break
       }
       if let subRange = data.range(of: delimiter) {
