@@ -124,10 +124,10 @@ public final class BufferedData {
       guard let data = try reader.read(length: delimiter.count) else {
         break
       }
-      if let subRange = data.range(of: delimiter) {
+      buffer.append(data)
+      if let subRange = buffer.range(of: delimiter) {
         range = subRange
       }
-      buffer.append(data)
     }
     if let range = range {
       let data = buffer.prefix(range.startIndex - buffer.startIndex)
