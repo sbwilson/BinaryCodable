@@ -148,18 +148,35 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
        }
    }
    */
-  func decode(until delimiter: Data) throws -> Data {
+ /* func decode(until delimiter: Data) throws -> Data {
     if delimiter.count == 0 {
-      throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
-        "Binary delimiter should have at least one byte"))
+		// No delimiter means just return the remainder of the buffer?
+		// This is probably a bug though...
+		return try self.decodeRemainder()
     }
     let remainingData = try bufferedData.peek(maxLength: Int.max)
-    guard let range = remainingData.range(of: delimiter) else {
+	  guard let range = remainingData.range(of: delimiter) else {
       throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
               "Unable to find delimiter for data."))
     }
-    return try bufferedData.read(maxBytes: range.lowerBound - delimiter.count + 1)
-  }
+    return try bufferedData.read(maxBytes: range.lowerBound - 1) //  - delimiter.count + 1)
+  }*/
+	
+	func decode(until delimiter: Data) throws -> Data {
+		if delimiter.count == 0 {
+			// No delimiter means just return the remainder of the buffer?
+			// This is probably a bug?
+			throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
+			  "Empty delimiter provided."))
+		}
+		
+		let result = try bufferedData.read(until: delimiter)
+		if !result.didFindDelimiter {
+			throw BinaryDecodingError.dataCorrupted(.init(debugDescription:
+			  "Unable to find delimiter for data."))
+		}
+		return result.data
+	}
 
   func decodeString(encoding: String.Encoding, terminator: UInt8?) throws -> String {
     let data: Data
