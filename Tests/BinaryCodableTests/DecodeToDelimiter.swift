@@ -32,6 +32,30 @@ struct DecodeHeader: BinaryDecodable {
   }
 }
 
+struct DecodeParts: BinaryDecodable {
+	var header: Data
+	var headerDelimiter: Data
+	var body: Data
+	var bodyDelimiter: Data
+	var footer: Data
+	
+	let headerEnd = Data([0xE0, 0x7F, 0x10, 0x00, 0x4F, 0x42, 0x00, 0x00 , 0xFF, 0xFF, 0xFF, 0xFF])
+	let bodyEnd = Data([0xFE, 0xFF, 0xDD, 0xE0, 0x00, 0x00, 0x00, 0x00])
+	
+
+	init(from decoder: any BinaryDecoder) throws {
+		var container = decoder.container(maxLength: nil)
+		
+		self.header = try container.decode(until: self.headerEnd)
+		self.headerDelimiter = try container.decode(length: headerEnd.count)
+		self.body = try container.decode(until: self.bodyEnd)
+		self.bodyDelimiter = try container.decode(length: bodyEnd.count)
+		self.footer = try container.decodeRemainder()
+	}
+	
+	
+}
+
 
 final class DecodeToBinaryDelimiterTests: XCTestCase {
 
@@ -65,4 +89,24 @@ final class DecodeToBinaryDelimiterTests: XCTestCase {
     XCTAssertTrue(header.foundDelimiter == header.delimiter)
     XCTAssertTrue(header.suffix == 0x090A)
   }
+	
+	func testDecodeDicom() throws {
+		// Given
+		let dicomUrl = URL(fileURLWithPath: #file)
+		  .deletingLastPathComponent()
+		  .appendingPathComponent("D_CLUNIE_NM1_JPLY.dcm")
+		let data = try Data(contentsOf: dicomUrl)
+		let decoder = BinaryDataDecoder()
+		
+		// When
+		let parts = try decoder.decode(DecodeParts.self, from: data)
+		
+		// Then
+		let expectedCount = data.count - (parts.header.count + parts.headerDelimiter.count + parts.bodyDelimiter.count + parts.footer.count)
+		XCTAssertTrue(parts.headerEnd == parts.headerDelimiter)
+		XCTAssertTrue(parts.bodyEnd == parts.bodyDelimiter)
+		XCTAssertTrue(parts.header.count == 2978)
+		XCTAssertTrue(parts.body.count == expectedCount)
+		XCTAssertTrue(parts.footer.count == 0)
+	}
 }
