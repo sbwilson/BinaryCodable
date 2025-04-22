@@ -112,32 +112,34 @@ public final class BufferedData {
   
   /**
    Returns bytes from the source until either the delimiter is found or there is no remaining data in the source.
-
-   The internal buffer cursor will also be moved forward by the number of returned bytes.
-
-   Note that it is not guaranteed that `maxLength` bytes will be returned. For example, if the source only has 100 bytes
-   of data available but 1000 are requested, then only 100 bytes will be returned.
    */
   public func read(until delimiter: Data) throws -> (data: Data, didFindDelimiter: Bool) {
-    var range = buffer.range(of: delimiter)
-    while range == nil {
-      guard let data = try reader.read(length: delimiter.count) else {
-        break
+    guard !delimiter.isEmpty else { return (data: try read(maxBytes: Int.max), didFindDelimiter: false) }
+   
+    while true {
+      // Search for the delimiter in the current buffer.
+      if let range = buffer.range(of: delimiter) {
+        let dataBeforeDelimiter = buffer.prefix(upTo: range.lowerBound)
+        buffer = buffer.dropFirst(dataBeforeDelimiter.count)
+        return (data: dataBeforeDelimiter, didFindDelimiter: true)
       }
-      buffer.append(data)
-      if let subRange = buffer.range(of: delimiter) {
-        range = subRange
+      
+      // If the delimiter isn't found and we've reached the end of the data source, return what's left in the buffer.
+      if reader.isAtEnd {
+        let remainingData = buffer
+        buffer.removeAll()
+        return (data: remainingData, didFindDelimiter: false)
       }
-    }
-    if let range = range {
-      let data = buffer.prefix(range.startIndex - buffer.startIndex)
-      buffer = buffer.dropFirst(data.count)
-      return (data: data, didFindDelimiter: true)
-    } else {
-      // Couldn't find the delimeter, so read in all of the data.
-      let data = buffer
-      buffer = buffer.dropFirst(data.count)
-      return (data: data, didFindDelimiter: false)
+      
+      // Read more data from the reader. Read only as much as the delimiter's size to avoid over-reading.
+      if let newData = try reader.read(length: delimiter.count) {
+        buffer.append(newData)
+      } else {
+        // If no more data is available, return what's left in the buffer.
+        let remainingData = buffer
+        buffer.removeAll()
+        return (data: remainingData, didFindDelimiter: false)
+      }
     }
   }
 
