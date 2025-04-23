@@ -268,7 +268,7 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
       let data = try self.pullData(length: recommendedAmount)
       return data.count > 0 ? data : nil
     }, readUntil: { delimiter in
-      let data = try self.peek(length: Int.max)
+      let data = try self.bufferedData.peek(maxLength: Int.max)
       let range = data.range(of: delimiter)
       if let range = range {
         return data.prefix(range.lowerBound)

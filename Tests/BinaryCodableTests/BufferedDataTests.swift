@@ -73,4 +73,16 @@ final class BufferedDataTests: XCTestCase {
     XCTAssertTrue(foundDelimiter)
     XCTAssertEqual([UInt8](readToDelimiter), [UInt8](0..<127))
   }
+  func testReadUntilByteDelimiter() throws {
+    // Given
+    let data = Data([UInt8](0..<255))
+    let buffer = bufferedData(from: data)
+    
+    // When
+    let (readToDelimiter, foundDelimiter) = try buffer.read(until: 127)
+    
+    // Then
+    XCTAssertTrue(foundDelimiter)
+    XCTAssertEqual([UInt8](readToDelimiter), [UInt8](0..<127))
+  }
 }
