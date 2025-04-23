@@ -271,9 +271,9 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
       let data = try self.bufferedData.peek(maxLength: Int.max)
       let range = data.range(of: delimiter)
       if let range = range {
-        return data.prefix(range.lowerBound)
+        return try self.bufferedData.read(maxBytes: range.lowerBound)
       } else {
-        return data
+        return try self.bufferedData.read(maxBytes: data.count)
       }
     }, isAtEnd: {
       return self.isAtEnd
