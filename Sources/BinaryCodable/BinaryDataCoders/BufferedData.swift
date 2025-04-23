@@ -115,32 +115,47 @@ public final class BufferedData {
    */
   public func read(until delimiter: Data) throws -> (data: Data, didFindDelimiter: Bool) {
     guard !delimiter.isEmpty else { return (data: try read(maxBytes: Int.max), didFindDelimiter: false) }
-   
-    while true {
-      // Search for the delimiter in the current buffer.
-      if let range = buffer.range(of: delimiter) {
-        let dataBeforeDelimiter = buffer.prefix(upTo: range.lowerBound)
-        buffer = buffer.dropFirst(dataBeforeDelimiter.count)
-        return (data: dataBeforeDelimiter, didFindDelimiter: true)
-      }
-      
-      // If the delimiter isn't found and we've reached the end of the data source, return what's left in the buffer.
-      if reader.isAtEnd {
-        let remainingData = buffer
-        buffer.removeAll()
-        return (data: remainingData, didFindDelimiter: false)
-      }
-      
-      // Read more data from the reader. Read only as much as the delimiter's size to avoid over-reading.
-      if let newData = try reader.read(length: delimiter.count) {
-        buffer.append(newData)
-      } else {
-        // If no more data is available, return what's left in the buffer.
-        let remainingData = buffer
-        buffer.removeAll()
-        return (data: remainingData, didFindDelimiter: false)
-      }
+    
+    if let range = buffer.range(of: delimiter) {
+      let prefix = buffer.prefix(upTo: range.lowerBound)
+      buffer = buffer.dropFirst(prefix.count)
+      return (data: prefix, didFindDelimiter: true)
     }
+    if reader.isAtEnd {
+      let remainingData = buffer
+      buffer.removeAll()
+      return (data: remainingData, didFindDelimiter: false)
+    }
+    let data = try reader.read(until: delimiter)
+    return (data: data, didFindDelimiter: !self.reader.isAtEnd)
+    
+    
+    
+//    while true {
+//      // Search for the delimiter in the current buffer.
+//      if let range = buffer.range(of: delimiter) {
+//        let dataBeforeDelimiter = buffer.prefix(upTo: range.lowerBound)
+//        buffer = buffer.dropFirst(dataBeforeDelimiter.count)
+//        return (data: dataBeforeDelimiter, didFindDelimiter: true)
+//      }
+//      
+//      // If the delimiter isn't found and we've reached the end of the data source, return what's left in the buffer.
+//      if reader.isAtEnd {
+//        let remainingData = buffer
+//        buffer.removeAll()
+//        return (data: remainingData, didFindDelimiter: false)
+//      }
+//      
+//      // Read more data from the reader. Read only as much as the delimiter's size to avoid over-reading.
+//      if let newData = try reader.read(length: delimiter.count) {
+//        buffer.append(newData)
+//      } else {
+//        // If no more data is available, return what's left in the buffer.
+//        let remainingData = buffer
+//        buffer.removeAll()
+//        return (data: remainingData, didFindDelimiter: false)
+//      }
+//    }
   }
 
   // Note: the buffer may never decrease in size which can be a concern for long-running applications.
@@ -163,6 +178,14 @@ public protocol BufferedDataSource {
    - returns: Approximately `length` bytes, or nil if no more data will ever be available.
    */
   func read(length: Int) throws -> Data?
+  
+  /**
+   Reads data from the desired source until we reach the binary `delimiter`
+
+   - parameter delimiter: the binary sequence to start from
+   - returns: bytes up to and including the delimiter
+   */
+  func read(until delimiter: Data) throws -> Data
 
   /**
    Whether or not the source has reached the end of its data.
@@ -174,18 +197,24 @@ public protocol BufferedDataSource {
  A type-erased buffered data source.
  */
 public final class AnyBufferedDataSource: BufferedDataSource {
-  public init(read: @escaping (Int) throws -> Data?, isAtEnd: @escaping () -> Bool) {
+  public init(read: @escaping (Int) throws -> Data?, readUntil: @escaping (Data) throws -> Data, isAtEnd: @escaping () -> Bool) {
     self.readCallback = read
     self.isAtEndCallback = isAtEnd
+    self.readUntilCallback = readUntil
   }
 
   public func read(length: Int) throws -> Data? {
     return try readCallback(length)
   }
 
+  public func read(until delimiter: Data) throws -> Data {
+    return try readUntilCallback(delimiter)
+  }
+  
   public var isAtEnd: Bool { return isAtEndCallback() }
 
   private let readCallback: (Int) throws -> Data?
+  private let readUntilCallback: (Data) throws -> Data
   private let isAtEndCallback: () -> Bool
 }
 
@@ -203,6 +232,16 @@ private final class DataBufferedDataSource: BufferedDataSource {
     }
     let requestedData = data
     data.removeAll()
+    return requestedData
+  }
+  
+  func read(until delimiter: Data) throws -> Data {
+    guard !isAtEnd else {
+      return Data()
+    }
+    let range = data.range(of: delimiter)
+    let requestedData = data.prefix(range?.lowerBound ?? data.endIndex)
+    data.removeFirst(requestedData.count)
     return requestedData
   }
 

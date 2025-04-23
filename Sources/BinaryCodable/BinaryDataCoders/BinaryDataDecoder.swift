@@ -267,6 +267,9 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
     return BufferedData(reader: AnyBufferedDataSource(read: { recommendedAmount -> Data? in
       let data = try self.pullData(length: recommendedAmount)
       return data.count > 0 ? data : nil
+    }, readUntil: { delimiter in
+      let data = try self.peek(length: Int.max)
+      return data
     }, isAtEnd: {
       return self.isAtEnd
     }))
