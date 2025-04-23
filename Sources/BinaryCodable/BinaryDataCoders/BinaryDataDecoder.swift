@@ -269,7 +269,12 @@ private class BinaryDataDecodingContainer: BinaryDecodingContainer {
       return data.count > 0 ? data : nil
     }, readUntil: { delimiter in
       let data = try self.peek(length: Int.max)
-      return data
+      let range = data.range(of: delimiter)
+      if let range = range {
+        return data.prefix(range.lowerBound)
+      } else {
+        return data
+      }
     }, isAtEnd: {
       return self.isAtEnd
     }))
